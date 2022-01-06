@@ -1,3 +1,11 @@
+# datasets
+./data/PROCAT/PROCAT.*.csv
+
+# custom
+.DS_Store
+.idea/
+scratchpad.py
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
