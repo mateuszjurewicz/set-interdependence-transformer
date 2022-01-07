@@ -1,5 +1,5 @@
 """
-One place for all testing functions for the float sorting experiments.
+One place for all testing functions and metrics.
 """
 import ast
 import copy
@@ -520,7 +520,6 @@ def check_sequences_brackets(sequences_predicted, sequences_original=None,
                         break
 
                 # 5. Current symbol is padding
-                # TODO: add handling of config['padding'], don't hardcode
                 elif symbol == 'P':
                     # break out of the symbol loop and check remainder of seq
                     break
@@ -1376,7 +1375,6 @@ def test_model_synthetic_custom(a_model, a_dataloader,
                         counter, num_examples
                     ))
 
-        # TODO: post-process (e.g. aggregate)
         final_score = sum(individual_scores) / num_examples
 
     return final_score, individual_scores

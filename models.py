@@ -7,6 +7,7 @@ particularly for model training, model config reading and validation.
 Configuration files for models, per experiment, can be found in the
 `model_configs` directory, in the form of json files.
 """
+
 import itertools
 import logging
 import math
@@ -23,12 +24,11 @@ from torch.nn import Parameter
 from tqdm import tqdm
 from transformers import BertModel, AutoModelForPreTraining
 
-warnings.filterwarnings("ignore", category=UserWarning)
-
 
 ###############################################################################
-# Custom Set Attention (2021)
-# Allowing for attention between set elements and perm-invar set composition.
+# Set Interdependence Transformer (2021)
+# Allowing for attention between set elements and permutation invariant
+# representation of the set in its entirety.
 ###############################################################################
 
 
@@ -180,7 +180,7 @@ class SentenceEmbedderBertCased(nn.Module):
 
 class OfferEmbedderBertCased(nn.Module):
     """
-    An offer embedding module using pretrained, danish-bert-botxo.
+    An offer embedding module using pretrained danish-bert-botxo.
     Outputs an embedding per sentence passed.
     """
 
@@ -240,9 +240,6 @@ class ElementEncoderFirstLayer(nn.Module):
         if embedding_by_dict:
             self.first_layer = nn.Embedding(embedding_by_dict_size,
                                             out_dims)
-        # TODO: add handling of language model inputs
-        elif False:
-            pass
         else:
             self.first_layer = nn.Linear(elem_dims, out_dims)
 
@@ -367,6 +364,8 @@ class PositionalEncoding(nn.Module):
 ###############################################################################
 # Set Encoders (2015 - 2021)
 # Modularized NNs for embedding entire sets in a permutation invariant way.
+# For RepSet implementation, see: https://github.com/giannisnik/repset
+# For AttSet implementation, see: https://github.com/Yang7879/AttSets
 ###############################################################################
 
 
@@ -394,9 +393,6 @@ class SetEncoderFirstLayer(nn.Module):
         if embedding_by_dict:
             self.first_layer = nn.Embedding(embedding_by_dict_size,
                                             out_dims)
-        # TODO: add handling of language model inputs
-        elif False:
-            pass
         else:
             self.first_layer = nn.Linear(elem_dims, out_dims)
 
@@ -433,13 +429,6 @@ class SetEncoderRNN(nn.Module):
         self.h0 = Parameter(torch.zeros(1), requires_grad=False)
         self.c0 = Parameter(torch.zeros(1), requires_grad=False)
 
-        # # first layer must be aware of input element dimensionality
-        # # and type (e.g. are inputs dictionary indices)
-        # self.first_layer = SetEncoderFirstLayer(self.elem_dims,
-        #                                         self.elem_embed_dims,
-        #                                         self.embedding_by_dict,
-        #                                         self.embedding_by_dict_size)
-
         # actual set encoder
         self.fc1 = nn.Linear(self.elem_embed_dims, self.set_embed_dims)
         self.rnn = nn.LSTM(
@@ -452,8 +441,6 @@ class SetEncoderRNN(nn.Module):
         self.fc2 = nn.Linear(self.set_embed_dims * 2, self.set_embed_dims)
 
     def forward(self, X):
-        # # per-elem embedding
-        # Z = self.first_layer(X)
 
         # adjust sizes
         Z = self.fc1(X)
@@ -520,13 +507,6 @@ class SetEncoderReadProcessWrite(nn.Module):
         self.set_embed_dims = set_embed_dims
         self.set_embed_t_steps = set_embed_t_steps
 
-        # # first layer must be aware of input element dimensionality
-        # # and type (e.g. are inputs dictionary indices)
-        # self.first_layer = SetEncoderFirstLayer(self.elem_dims,
-        #                                         self.elem_embed_dims,
-        #                                         self.embedding_by_dict,
-        #                                         self.embedding_by_dict_size)
-
         # actual set encoder
         self.fc1 = nn.Linear(self.elem_embed_dims, self.set_embed_dims)
         self.encoder = RPWEncoder(
@@ -536,9 +516,6 @@ class SetEncoderReadProcessWrite(nn.Module):
         self.fc2 = nn.Linear(self.set_embed_dims * 2, self.set_embed_dims)
 
     def forward(self, X):
-        # # per-elem embedding
-        # Z = self.first_layer(X)
-
         # adjust sizes
         Z = self.fc1(X)
 
@@ -576,13 +553,6 @@ class SetEncoderDeepSets(nn.Module):
         self.set_embed_num_layers = set_embed_num_layers
         self.set_pooling_type = set_pooling_type
 
-        # # first layer must be aware of input element dimensionality
-        # # and type (e.g. are inputs dictionary indices)
-        # self.first_layer = SetEncoderFirstLayer(self.elem_dims,
-        #                                         self.elem_embed_dims,
-        #                                         self.embedding_by_dict,
-        #                                         self.embedding_by_dict_size)
-
         # remaining per-element layers
         self.remaining_layers = nn.ModuleList(
             [nn.Sequential(nn.Linear(self.elem_embed_dims,
@@ -608,9 +578,6 @@ class SetEncoderDeepSets(nn.Module):
              range(self.set_embed_num_layers)])
 
     def forward(self, X):
-
-        # # per-elem embedding
-        # Z = self.first_layer(X)
 
         # remaining layers
         for layer in self.remaining_layers:
@@ -651,13 +618,6 @@ class SetEncoderSetTransformer(nn.Module):
         self.set_embed_num_heads = set_embed_num_heads
         self.set_embed_num_seeds = set_embed_num_seeds
 
-        # # first layer must be aware of input element dimensionality
-        # # and type (e.g. are inputs dictionary indices)
-        # self.first_layer = SetEncoderFirstLayer(self.elem_dim,
-        #                                         self.elem_embed_dim,
-        #                                         self.embedding_by_dict,
-        #                                         self.embedding_by_dict_size)
-
         # remaining per-element layers
         self.remaining_layers = nn.ModuleList(
             [nn.Sequential(SAB(self.elem_embed_dim,
@@ -679,9 +639,6 @@ class SetEncoderSetTransformer(nn.Module):
              range(self.set_embed_n_layers)])
 
     def forward(self, X):
-
-        # # per-elem embedding
-        # Z = self.first_layer(X)
 
         for layer in self.remaining_layers:
             Z = layer(X)
@@ -922,9 +879,8 @@ class PermutationInvariantPointerDecoder(nn.Module):
 
 class PermutationSensitivePointerDecoder(nn.Module):
     """
-    Decoder model for Pointer-Net
+    Decoder modulr for Pointer-Net
     """
-
     def __init__(self,
                  elem_embed_dim,
                  set_embed_dim,
@@ -1184,7 +1140,7 @@ class FutureHistoryPointerDecoder(nn.Module):
 
     def resize(self, embedded_elements, set_encoding):
         """
-        A resizing function, must be called in ALL (both?) versions of the forward pass
+        A resizing function, must be called in both versions of the forward pass
         (infer and train).
         :param embedded_elements: embeded elements as a batch
         :param set_encoding: encoded set as a tuple of tensors, as batch
@@ -2886,8 +2842,6 @@ def validate_model_config(config):
         raise KeyError(error_msg)
 
     valid_elem_encoders = ['linear', 'settransformer']
-    # valid_set_encoders = ['deepsets', 'settransformer', 'PROPOSED']
-    # valid_permutation_modules = ['ptrnet', 'rpw', 'futurehistory', 'PROPOSED']
 
     if elem_encoder not in valid_elem_encoders:
         error_msg = "Unknown element encoder type! " \
@@ -2949,102 +2903,6 @@ def get_model(config):
     model.float()
 
     return model
-
-
-# def train_epochs_old(a_model, a_model_path, a_model_optimizer, a_loss,
-#                  a_train_dataloader,
-#                  a_cv_dataloader, a_config, num_epochs,
-#                  x_name, y_name, logger, tqdm_file, run_tests_function,
-#                  allow_gpu=True,
-#                  report_every_n_batches=1, validate_every_n_epochs=1,
-#                  save_model_every_n_epochs=100):
-#     """
-#     Take a model, an optimizer and a num_epochs and train it.
-#     """
-#     # handle gpu/cpu
-#     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-#
-#     # cuda
-#     if torch.cuda.is_available() and allow_gpu:
-#         a_model.cuda()
-#         net = torch.nn.DataParallel(a_model,
-#                                     device_ids=range(
-#                                         torch.cuda.device_count()))
-#         cudnn.benchmark = True
-#         logger.info('CUDA available, using GPU:')
-#         logger.info(torch.cuda.get_device_name(0))
-#     time.sleep(1)
-#
-#     # epochs
-#     losses = []
-#
-#     for epoch in range(num_epochs):
-#         epoch_losses = []
-#         iterator = tqdm(a_train_dataloader, unit=' batches', file=tqdm_file)
-#         logger.info('Epoch {}'.format(epoch + 1))
-#
-#         for i_batch, sample_batched in enumerate(iterator):
-#             batch_losses = []
-#             iterator.set_description(
-#                 'Epoch {} / {}'.format(epoch + 1, num_epochs))
-#
-#             train_batch = Variable(sample_batched[x_name])
-#             target_batch = Variable(sample_batched[y_name])
-#
-#             if torch.cuda.is_available() and allow_gpu:
-#                 train_batch = train_batch.cuda()
-#                 target_batch = target_batch.cuda()
-#
-#             o, p = a_model(train_batch)
-#             o = o.contiguous().view(-1, o.size()[-1])
-#
-#             target_batch = target_batch.view(-1)
-#
-#             loss = a_loss(o, target_batch)
-#             tracked_loss = loss.clone().detach().cpu().numpy()
-#             losses.append(tracked_loss)
-#             epoch_losses.append(tracked_loss)
-#             batch_losses.append(tracked_loss)
-#
-#             a_model_optimizer.zero_grad()
-#             loss.backward()
-#             a_model_optimizer.step()
-#
-#             # report avg loss for batch
-#             batch_loss = sum(batch_losses) / len(batch_losses)
-#             iterator.set_postfix(avg_loss=' {:.5f}'.format(batch_loss))
-#
-#             if i_batch % report_every_n_batches == 0:
-#                 logger.info(
-#                     'Epoch {} Batch {}, average loss {:.5f}'.format(epoch + 1,
-#                                                                     i_batch + 1,
-#                                                                     batch_loss))
-#         epoch_loss = sum(epoch_losses) / len(epoch_losses)
-#         logger.info('Epoch {} average loss {:.5f}'.format(epoch + 1,
-#                                                           epoch_loss))
-#
-#         # report cv performance
-#         if (epoch + 1) % validate_every_n_epochs == 0:
-#             a_model.eval()
-#             logger.info('Validation at epoch {} starting ...'.format(epoch + 1))
-#             _ = run_tests_function(a_model, a_cv_dataloader, logger, a_config,
-#                                    batched=True)
-#             logger.info('Validation at epoch {} finished.'.format(epoch + 1))
-#             a_model.train()
-#
-#         # save model
-#         if (epoch + 1) % save_model_every_n_epochs == 0:
-#             logger.info('Model saving ... ')
-#             a_model.to('cpu')
-#             torch.save(a_model,
-#                        a_model_path + '_epoch_{}.pth'.format(epoch + 1))
-#             a_model.to(device)
-#
-#     # report final loss
-#     logger.info('Final training loss: {}'.format(loss))
-#
-#     # return last loss
-#     return loss, losses
 
 
 def train_epochs(a_model, a_model_path, a_model_optimizer, a_loss,
