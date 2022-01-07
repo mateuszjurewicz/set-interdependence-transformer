@@ -1,5 +1,5 @@
 # datasets
-./data/PROCAT/PROCAT.*.csv
+data/PROCAT/PROCAT.*.csv
 
 # custom
 .DS_Store
