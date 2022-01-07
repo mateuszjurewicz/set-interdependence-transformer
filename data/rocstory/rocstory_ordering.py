@@ -14,38 +14,54 @@
 # limitations under the License.
 
 # Lint as: python3
-"""PROCAT catalog structure prediction dataset."""
+"""ROCStories Corpora ordering dataset."""
 
 from __future__ import absolute_import, division, print_function
 
-import csv
+import json
 import os
-import pathlib
 
 import datasets
 import numpy as np
 
-CITATION = """
-@inproceedings{jurewicz2021procat,
-  title={PROCAT: Product Catalogue Dataset for Implicit Clustering, Permutation Learning and Structure Prediction},
-  author={Jurewicz, Mateusz Maria and Derczynski, Leon},
-  booktitle={Thirty-fifth Conference on Neural Information Processing Systems Datasets and Benchmarks Track (Round 1)},
-  year={2021}
+import csv
+
+import pathlib
+
+_CITATION = """
+@inproceedings{mostafazadeh-etal-2016-corpus,
+    title = "A Corpus and Cloze Evaluation for Deeper Understanding of Commonsense Stories",
+    author = "Mostafazadeh, Nasrin  and
+      Chambers, Nathanael  and
+      He, Xiaodong  and
+      Parikh, Devi  and
+      Batra, Dhruv  and
+      Vanderwende, Lucy  and
+      Kohli, Pushmeet  and
+      Allen, James",
+    booktitle = "Proceedings of the 2016 Conference of the North {A}merican Chapter of the Association for Computational Linguistics: Human Language Technologies",
+    month = jun,
+    year = "2016",
+    address = "San Diego, California",
+    publisher = "Association for Computational Linguistics",
+    url = "https://www.aclweb.org/anthology/N16-1098",
+    doi = "10.18653/v1/N16-1098",
+    pages = "839--849",
 }
 """
+
 _DESCRIPTION = """
 """
 
-_PATH = "data/PROCAT/"
+_PATH = "data/rocstory/"
 
-# sentences are offers, names kept by convention
 _SENTENCES = "sentences"
 _SHUFFLED_SENTENCES = "shuffled_sentences"
 _LABEL = "label"
 
 
-class PROCATOrdering(datasets.GeneratorBasedBuilder):
-    """PROCAT ordering dataset."""
+class ROCOrdering(datasets.GeneratorBasedBuilder):
+    """ROCStory ordering dataset."""
 
     VERSION = datasets.Version("1.0.0")
 
@@ -56,41 +72,42 @@ class PROCATOrdering(datasets.GeneratorBasedBuilder):
                 {
                     _SENTENCES: datasets.Sequence(datasets.Value("string")),
                     _SHUFFLED_SENTENCES: datasets.Sequence(datasets.Value("string")),
-                    _LABEL: datasets.Sequence(datasets.Value("int64")),
+                    _LABEL: datasets.Sequence(datasets.Value("int8")),
                 }
             ),
             supervised_keys=None,
-            homepage="https://figshare.com/articles/dataset/PROCAT_Product_Catalogue_Dataset_for_Implicit_Clustering_Permutation_Learning_and_Structure_Prediction/14709507",
-            citation=CITATION,
+            homepage="https://cs.rochester.edu/datasets/rocstories/",
+            citation=_CITATION,
         )
         return info
 
     def _split_generators(self, dl_manager):
         """Returns SplitGenerators."""
         data_path = os.path.join(pathlib.Path().absolute(), _PATH)
+        print(data_path)
         return [
             datasets.SplitGenerator(
                 name=datasets.Split.TRAIN,
-                gen_kwargs={"path": os.path.join(data_path, "PROCAT.train.csv")},
+                gen_kwargs={"path": os.path.join(data_path, "ROCStory.train.csv")},
             ),
             datasets.SplitGenerator(
                 name=datasets.Split.VALIDATION,
-                gen_kwargs={"path": os.path.join(data_path, "PROCAT.validation.csv")},
+                gen_kwargs={"path": os.path.join(data_path, "ROCStory.validation.csv")},
             ),
             datasets.SplitGenerator(
                 name=datasets.Split.TEST,
-                gen_kwargs={"path": os.path.join(data_path, "PROCAT.test.csv")},
+                gen_kwargs={"path": os.path.join(data_path, "ROCStory.test.csv")},
             ),
         ]
 
     def _generate_examples(self, path=None):
         """Yields examples."""
         with open(path, "r", encoding='UTF-8') as f:
-            csv_reader = csv.reader(f, delimiter=";")
+            csv_reader = csv.reader(f, delimiter=",")
             for i, elems in enumerate(csv_reader):
-                if len(elems) != 201:
+                if len(elems) != 7:
                     continue
-                sentences = elems[-200:]
+                sentences = elems[-5:]
 
                 shuffled_sentences, label = self.shuffle_sentences(sentences)
                 yield i, {
