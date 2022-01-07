@@ -35,7 +35,7 @@ if __name__ == "__main__":
     cfg = dict()
 
     # cfg experiment
-    cfg['grammar_type'] = 'brackets'  # [canonical, brackets, harder]
+    cfg['grammar_type'] = 'harder'  # [canonical, brackets, harder]
     cfg['model_configs_path'] = os.path.join('model_configs', 'grammar.json')
     cfg['experiment_name'] = 'grammar_{}'.format(cfg['grammar_type'])
     cfg['generate_new_data'] = True
@@ -70,12 +70,12 @@ if __name__ == "__main__":
     cfg['db_url'] = 'localhost:27017'
 
     # cfg data
-    cfg['train_size'] = 5000  # 5000 for full, 20 for small
-    cfg['test_size'] = 3000  # 3000 for full, 20 for small
-    cfg['cv_size'] = 2000  # 2000 for full, 20 for small
-    cfg['train_set_size'] = 15  # 20 leads to similar performance across the board, upping to 30
-    cfg['test_set_size'] = 15
-    cfg['cv_set_size'] = 15
+    cfg['train_size'] = 5000
+    cfg['test_size'] = 1000
+    cfg['cv_size'] = 1000
+    cfg['train_set_size'] = 675
+    cfg['test_set_size'] = 675
+    cfg['cv_set_size'] = 675
     cfg['batch_size'] = 32
     cfg['dataset_train'] = '_'.join([str(cfg['train_set_size']), str(cfg['train_size'])])
     cfg['dataset_test'] = '_'.join([str(cfg['test_set_size']), str(cfg['test_size'])])
@@ -192,10 +192,7 @@ if __name__ == "__main__":
                                   restore_grammar_sequence, idx2word=cfg['idx2word'])
 
         # select the model-appropriate training function and loss
-        if cfg['permute_module_type'] == 'futurehistory':
-            criterion = nn.NLLLoss(reduction='none')
-        else:
-            criterion = torch.nn.CrossEntropyLoss()
+        criterion = nn.NLLLoss(reduction='none')
 
         # model training
         log.info('Model training started')
@@ -241,7 +238,6 @@ if __name__ == "__main__":
             log.info('Model testing - adding observers')
             ex.observers.append(
                 MongoObserver(url=cfg['db_url'], db_name=cfg['db_name']))
-
 
             # experiment config
             @ex.config

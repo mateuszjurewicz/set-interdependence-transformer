@@ -1,6 +1,5 @@
 """
-Basic script for running a full experiment on the PROCAT dataset
-(product catalogue structures) framed as permutation learning.
+Basic script for running a full experiment on the ROCStory dataset.
 """
 import json
 import logging
@@ -37,8 +36,8 @@ if __name__ == "__main__":
     cfg['dataset_name'] = 'rocstory'  # ['rocstory']
     cfg['experiment_name'] = 'sentence_ordering_{}'.format(cfg['dataset_name'])
     cfg['language_model'] = 'bert-base-cased'  # ['bert-base-cased']
-    cfg['generate_new_data'] = False  # set to False when training
-    cfg['debug_dataset_sizes'] = True  # set to False when not debugging
+    cfg['generate_new_data'] = False
+    cfg['debug_dataset_sizes'] = False
     cfg['model_configs_path'] = os.path.join('model_configs', 'sentence_ordering.json')
 
     # cfg seed
@@ -46,15 +45,12 @@ if __name__ == "__main__":
 
     # reporting and model persisting
     cfg['report_every_n_batches'] = 50
-    cfg['validate_every_n_epochs'] = 10 # set to 10
-    cfg['save_model_every_n_epochs'] = 9999999 # too big
+    cfg['validate_every_n_epochs'] = 25
+    cfg['save_model_every_n_epochs'] = 10
 
-    if cfg['dataset_name'] == 'rocstory':
-        cfg['max_sentence_length'] = 42  # checked, 42 is max after BERT tokenization for all ROCStory set
-        cfg['num_sentences'] = 5
-    else:
-        cfg['max_sentence_length'] = None
-        cfg['num_sentences'] = None
+    # rocstory
+    cfg['max_sentence_length'] = 42  # checked, 42 is max after BERT tokenization for entire ROCStory set
+    cfg['num_sentences'] = 5
 
     # cfg metrics tracking
     cfg['log_level'] = logging.INFO
@@ -65,7 +61,7 @@ if __name__ == "__main__":
     # cfg data
     cfg['dataset_train'] = 'rocstory'  # for backwards compatibility
     cfg['dataset_test'] = 'rocstory'  # for backwards compatibility
-    cfg['batch_size'] = 64
+    cfg['batch_size'] = 32
     cfg['train_dataset_path'] = os.path.join(
         os.getcwd(), 'data', 'rocstory',
         '{}_setlen_{}_batch_{}_train.pb'.format(
@@ -144,7 +140,7 @@ if __name__ == "__main__":
                                   10)
 
             log.info('Obtaining validation data ...')
-            train_dataloader = get_sentence_ordering_dataloader('validation',
+            cv_dataloader = get_sentence_ordering_dataloader('validation',
                                                                 log,
                                                                 cfg,
                                                                 tokenizer)
@@ -157,7 +153,7 @@ if __name__ == "__main__":
             log.info('Data persistance (saving dataloaders)')
             torch.save(train_dataloader, cfg['train_dataset_path'])
             torch.save(test_dataloader, cfg['test_dataset_path'])
-            torch.save(test_dataloader, cfg['cv_dataset_path'])
+            torch.save(cv_dataloader, cfg['cv_dataset_path'])
 
         # reload dataloaders
         log.info('Data (re-)loading')
@@ -194,10 +190,7 @@ if __name__ == "__main__":
             display_func=decode_sentence_batch)
 
         # select the model-appropriate training function and loss
-        if cfg['permute_module_type'] == 'futurehistory':
-            criterion = nn.NLLLoss(reduction='none')
-        else:
-            criterion = torch.nn.CrossEntropyLoss()
+        criterion = nn.NLLLoss(reduction='none')
 
         # model training
         log.info('Model training started')
@@ -246,7 +239,6 @@ if __name__ == "__main__":
             log.info('Model testing - adding observers')
             ex.observers.append(
                 MongoObserver(url=cfg['db_url'], db_name=cfg['db_name']))
-
 
             # experiment config
             @ex.config

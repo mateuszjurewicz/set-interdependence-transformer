@@ -1,0 +1,42 @@
+{
+  "models": [
+    {
+      "catalog_ordering": true,
+      "train_learning_rate": 0.0001,
+      "train_num_epochs": 50,
+      "elem_dim": 3072,
+      "elem_embedding_encoder_type": "linear",
+      "elem_embedding_dim": 256,
+      "elem_embedding_by_dict": false,
+      "elem_embedding_by_dict_size": null,
+      "elem_embedding_n_layers": 1,
+      "elem_embedding_add_positonal_encoding": false,
+      "set_encoder_type": "custom",
+      "set_encoder_custom_attention_type": "set_interdependence",
+      "set_encoder_custom_attention_n_layers": 5,
+      "set_encoder_rpw_t_steps": null,
+      "set_encoder_rnn_layers": null,
+      "set_encoder_rnn_bidir": false,
+      "set_encoder_rnn_dropout": null,
+      "set_encoder_pooling_type": null,
+      "set_encoder_num_heads": 4,
+      "set_encoder_num_seeds": 1,
+      "set_encoder_dim": 256,
+      "set_encoder_n_layers": 1,
+      "context_rnn_used": false,
+      "context_rnn_dim": null,
+      "context_rnn_layers": null,
+      "context_rnn_bidir": false,
+      "context_rnn_dropout": null,
+      "permute_module_type": "futurehistory",
+      "permute_module_is_concat": false,
+      "permute_module_hidden_dim": 256,
+      "permute_module_dropout": 0.1,
+      "permute_module_bidirectional": true,
+      "permute_module_masking": true,
+      "permute_module_label_dim": 2,
+      "permute_module_pair_dim": 256,
+      "permute_module_lamb_rela": 0
+    }
+  ]
+}

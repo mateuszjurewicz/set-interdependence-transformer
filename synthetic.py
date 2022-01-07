@@ -37,7 +37,7 @@ if __name__ == "__main__":
     # cfg experiment
     cfg['seed'] = random.randint(0, 10000)
     cfg['experiment_name'] = 'synthetic'
-    cfg['generate_new_data'] = False  # keep this False for most experiments
+    cfg['generate_new_data'] = True
 
     # cfg model path
     cfg['model_configs_path'] = os.path.join('model_configs', 'synthetic.json')
@@ -45,7 +45,7 @@ if __name__ == "__main__":
     # reporting and model persisting
     cfg['report_every_n_batches'] = 50
     cfg['validate_every_n_epochs'] = 10
-    cfg['save_model_every_n_epochs'] = 20
+    cfg['save_model_every_n_epochs'] = 25
 
     # cfg metrics tracking
     cfg['log_level'] = logging.INFO
@@ -57,11 +57,11 @@ if __name__ == "__main__":
     cfg['train_n_catalogs'] = 10000
     cfg['test_n_catalogs'] = 5000
     cfg['cv_n_catalogs'] = 3000  # test and cv need different sizes
-    cfg['train_n_tokens'] = 20  # 20 takes a long, long time
-    cfg['train_n_offers'] = 15
-    cfg['max_pages'] = 10  # same max and min pages for train & test for now
-    cfg['min_pages'] = 3  # same max and min pages for train & test for now
-    cfg['batch_size'] = 64
+    cfg['train_n_tokens'] = 30
+    cfg['train_n_offers'] = 25
+    cfg['max_pages'] = 20
+    cfg['min_pages'] = 5
+    cfg['batch_size'] = 32
     cfg['n_mset_shuffles'] = 1
     cfg['train_offer_distributions'] = {
         'b': 100,
@@ -395,10 +395,7 @@ if __name__ == "__main__":
                                   restore_synthetic_catalog)
 
         # select the model-appropriate training function and loss
-        if cfg['permute_module_type'] == 'futurehistory':
-            criterion = nn.NLLLoss(reduction='none')
-        else:
-            criterion = torch.nn.CrossEntropyLoss()
+        criterion = nn.NLLLoss(reduction='none')
 
         # model training
         log.info('Model training started')
@@ -447,7 +444,6 @@ if __name__ == "__main__":
             log.info('Model testing - adding observers')
             ex.observers.append(
                 MongoObserver(url=cfg['db_url'], db_name=cfg['db_name']))
-
 
             # experiment config
             @ex.config

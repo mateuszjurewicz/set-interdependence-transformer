@@ -47,8 +47,8 @@ if __name__ == "__main__":
 
     # reporting and model persisting
     cfg['report_every_n_batches'] = 50
-    cfg['validate_every_n_epochs'] = 10
-    cfg['save_model_every_n_epochs'] = 10
+    cfg['validate_every_n_epochs'] = 25
+    cfg['save_model_every_n_epochs'] = 25
 
     # cfg metrics tracking
     cfg['log_level'] = logging.INFO
@@ -59,13 +59,13 @@ if __name__ == "__main__":
     # cfg data
     cfg['train_size'] = 20000
     cfg['test_size'] = 5000
-    cfg['cv_size'] = 3000 # test and cv need different sizes
-    cfg['train_set_size'] = 11  # 20 takes a long, long time
-    cfg['cv_set_size'] = 11
-    cfg['test_set_size'] = 11
-    cfg['train_batch_size'] = 64
-    cfg['cv_batch_size'] = 64
-    cfg['test_batch_size'] = 64
+    cfg['cv_size'] = 3000
+    cfg['train_set_size'] = 20
+    cfg['cv_set_size'] = 20
+    cfg['test_set_size'] = 20
+    cfg['train_batch_size'] = 32
+    cfg['cv_batch_size'] = 32
+    cfg['test_batch_size'] = 32
     cfg['dataset_train'] = '_'.join(
         [str(cfg['train_set_size']), str(cfg['train_size'])])
     cfg['dataset_cv'] = '_'.join(
@@ -219,10 +219,7 @@ if __name__ == "__main__":
                 target_tour_length, predicted_tour_length))
 
         # select the model-appropriate training function and loss
-        if cfg['permute_module_type'] == 'futurehistory':
-            criterion = nn.NLLLoss(reduction='none')
-        else:
-            criterion = torch.nn.CrossEntropyLoss()
+        criterion = nn.NLLLoss(reduction='none')
 
         # model training
         log.info('Model training started')
@@ -297,7 +294,6 @@ if __name__ == "__main__":
             log.info('Model testing - adding observers')
             ex.observers.append(
                 MongoObserver(url=cfg['db_url'], db_name=cfg['db_name']))
-
 
             # experiment config
             @ex.config

@@ -34,12 +34,12 @@ if __name__ == "__main__":
     # cfg experiment
     cfg['experiment_name'] = 'PROCAT'  # [PROCAT]
     cfg['language_model'] = 'danish-bert-botxo'
-    cfg['generate_new_data'] = True  # set to False when training
-    cfg['debug_dataset_sizes'] = False  # set to False when not debugging
-    cfg['batch_size'] = 64  # set to 64/32 normally, 1 for debugging
+    cfg['generate_new_data'] = False
+    cfg['debug_dataset_sizes'] = False
+    cfg['batch_size'] = 32
     cfg['dataset_name'] = cfg['experiment_name']
     if cfg['dataset_name'] == 'PROCAT':
-        cfg['max_sentence_length'] = 256  # 256, 512 max for this BERT, very few offers are above, 24 for debug
+        cfg['max_sentence_length'] = 512
         cfg['num_sentences'] = 200
 
     cfg['model_configs_path'] = os.path.join('model_configs', 'procat.json')
@@ -49,7 +49,7 @@ if __name__ == "__main__":
 
     # reporting and model persisting
     cfg['report_every_n_batches'] = 50
-    cfg['validate_every_n_epochs'] = 10  # set to 10
+    cfg['validate_every_n_epochs'] = 25
     cfg['save_model_every_n_epochs'] = cfg['report_every_n_batches'] // 2  # save twice per run
 
     # cfg metrics tracking
@@ -169,12 +169,6 @@ if __name__ == "__main__":
         for param in model.offer_embedder.parameters():
             param.requires_grad = False
 
-        # select the model-appropriate training function and loss
-        if cfg['permute_module_type'] == 'futurehistory':
-            criterion = nn.NLLLoss(reduction='none')
-        else:
-            criterion = torch.nn.CrossEntropyLoss()
-
         # optimizer
         optimizer = optim.Adam(
             filter(lambda p: p.requires_grad, model.parameters()),
@@ -194,15 +188,8 @@ if __name__ == "__main__":
         log.info('Predicted: {}'.format(pred[0]))
         log.info('Correct: {}'.format(a_batch['label'][0]))
 
-        # TODO: Continue here
-        #  - look at sentence_ordering_train.py to copy over the next lines! (they differ)
-        #  - run for 1 epoch on gpu, see if goes to omniboard properly
-
         # select the model-appropriate training function and loss
-        if cfg['permute_module_type'] == 'futurehistory':
-            criterion = nn.NLLLoss(reduction='none')
-        else:
-            criterion = torch.nn.CrossEntropyLoss()
+        criterion = nn.NLLLoss(reduction='none')
 
         # model training
         log.info('Model training started')
@@ -255,7 +242,6 @@ if __name__ == "__main__":
             ex.observers.append(
                 MongoObserver(url=cfg['db_url'], db_name=cfg['db_name']))
 
-
             # experiment config
             @ex.config
             def ex_config():
@@ -275,7 +261,6 @@ if __name__ == "__main__":
                 num_params = None
                 language_model = cfg['language_model']
                 cfg = cfg  # needed
-
 
             # experiment run function
             @ex.main

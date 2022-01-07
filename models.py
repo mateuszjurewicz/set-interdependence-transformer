@@ -32,9 +32,9 @@ warnings.filterwarnings("ignore", category=UserWarning)
 ###############################################################################
 
 
-class SetAttentionSimplest(nn.Module):
+class SetInterDependenceTransformer(nn.Module):
     """
-    Atomic, custom module for attending between set elements
+    Set Interdependence Transformer module for attending between set elements
     and its permutation-invariant representation.
     """
 
@@ -44,7 +44,7 @@ class SetAttentionSimplest(nn.Module):
                  set_att_n_heads,
                  set_att_n_layers,
                  set_att_n_seeds):
-        super(SetAttentionSimplest, self).__init__()
+        super(SetInterDependenceTransformer, self).__init__()
 
         # params
         self.set_att_in_dim = set_att_in_dim
@@ -113,11 +113,11 @@ class CustomSetEncoder(nn.Module):
         self.first_pool = PMA(self.set_att_out_dim, self.set_att_n_heads, self.set_att_n_seeds)
 
         # blocks of appropriate type
-        if self.set_att_type == 'setattentionsimplest':
+        if self.set_att_type == 'set_interdependence':
 
             # remaining blocks of app
             self.main_attention_blocks = nn.ModuleList(
-                [SetAttentionSimplest(
+                [SetInterDependenceTransformer(
                     self.set_att_out_dim,
                     self.set_att_out_dim,
                     self.set_att_n_heads,
@@ -126,8 +126,7 @@ class CustomSetEncoder(nn.Module):
                     for _ in range(self.set_att_n_blocks - 1)]
             )
         else:
-            # TODO: add other types of set attention
-            raise (Exception('Unimplemented type of set attention'))
+            raise (Exception('Unimplemented type of custom set attention'))
 
     def forward(self, X):
         E = self.elem_resizer(X)
