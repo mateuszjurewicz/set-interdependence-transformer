@@ -269,69 +269,6 @@ def show_tsp(points, solution, run_id=None, tour_length_predicted=None, tour_len
     # plt.show
 
 
-# def show_tsp_multiple(a_model, a_dataloader, run_id, n=4):
-#     """Take a number of examples, plot predictions"""
-#
-#     # get 6 examples
-#     x_batch, y_batch = get_example(a_dataloader)
-#
-#     # predict
-#     _, y_pred = a_model(x_batch)
-#
-#     tour_lengths_predicted = []
-#     tour_lengths_target = []
-#
-#     # set figsize
-#     plt.rcParams['figure.figsize'] = [20, 20]
-#
-#     # keep x and y scale same
-#     plt.axis('scaled')
-#
-#     for i in range(n):
-#
-#         # calculate all tour lengths
-#         tl_predicted = get_tour_length(x_batch[i], y_pred[i])
-#         tl_target = get_tour_length(x_batch[i], y_batch[i])
-#
-#         tour_lengths_predicted.append(tl_predicted)
-#         tour_lengths_target.append(tl_target)
-#
-#         # obtain the plot
-#         # convert to numpy
-#         points = x_batch[i].numpy()
-#         solution = y_pred[i].numpy()
-#
-#         # order them according to solutions
-#         # (using numpy ordering)
-#         ordered_points = points[solution]
-#
-#         # extract x and y from ordered points and points separately
-#         # to plot even illegal orders that ommit points
-#         xs = points[:, 0]
-#         ys = points[:, 1]
-#         con_xs = ordered_points[:, 0]
-#         con_ys = ordered_points[:, 1]
-#
-#         # switch to current subplot
-#         plt.subplot(2, 2, i) # row 1, col 2 index 1
-#
-#         # plot points first
-#         plt.scatter(xs, ys)
-#
-#         # plot connecting lines
-#         for i in range(0,len(con_xs)-1):
-#             connectpoints(con_xs, con_ys, i, i+1)
-#
-#         # add tour length calculation(s)
-#         if tl_predicted and tl_target:
-#             plt.xlabel('Tour Lengths\nPredicted: {:.4f}\nTarget: {:.4f}'.format(tl_predicted,
-#                                                                                 tl_target), fontsize=10)
-#         elif tl_predicted:
-#             plt.xlabel('Tour Length Predicted: {:.4f}'.format(tl_predicted), fontsize=10)
-#
-#     plt.savefig('plots/tsp_tour_{}.png'.format(run_id))
-
-
 def get_tour_length(points, solution):
     """
     Calculate the length of the tour between points, given their order provided in the solution.
@@ -486,32 +423,13 @@ class TSPDataset(Dataset):
         if self.solve:
             for i, x in enumerate(solutions_iter):
                 solutions_iter.set_description('Solved %i/%i' % (i+1, len(points_list)))
-
-                #  just giving the starting city at 0th index means there are 2 equal
-                #  but different paths from the persective of the ML model paths
-                #  (clockwise and counterclockwise)
-                #  but we can, once we get a solution, put the second on in the
-                #  right place, and feed that as x and recalculate the solution
                 y = self.solver(x)
                 idx_of_second = y[1]
-
-                # remove the element at that idx from x
                 x_prim = np.delete(x, idx_of_second, 0)
-
-                # isolate that element
                 second_element = x[idx_of_second]
-
-                # and reinsert it at 2nd index (1)
                 x_prim = np.insert(x_prim, 1, second_element, axis=0)
-
-                # solve it again to obtain the proper solution
                 y_final = self.solver(x_prim)
-
-                # add proper solution
                 solutions.append(y_final)
-
-                # replace original x with the new one, with first 2 cities
-                # in proper order
                 points_list[i] = x_prim
         else:
             solutions = None
@@ -907,7 +825,31 @@ def get_grammar_dataloader(grammar_type, dataset_type, logger, config):
     return dataloader
 
 
-def get_procat_dataloader(dataset_type, logger, config):
+def get_procat_dataloader(dataset_type, logger, config, tokenizer):
+    """
+    Create the dataloaders for the procat datasets,
+    per language model.
+    """
+    available_dataset_types = ['train', 'test', 'validation']
+    if dataset_type not in available_dataset_types:
+        error_msg = 'Incorrect dataset type specified, ' \
+                    'try {}'.format(available_dataset_types)
+        logging.exception(error_msg)
+        raise Exception(error_msg)
+
+    # handle each dataset separately (move if to function at some point)
+    if config['dataset_name'] == 'PROCAT':
+        # load the csv
+        logger.info('Handling {} csv files'.format(config['dataset_name']))
+
+        # load datasets
+        dset = ProcatData(dataset_type, logger, config, tokenizer)
+        dloader = dset.get_dataloader()
+
+        return dloader
+
+
+def get_procat_dataloader_old(dataset_type, logger, config):
     """Create the dataloaders for the PROCAT or PROCAT mini train or test set"""
     if dataset_type not in ['train', 'test']:
         raise Exception('Incorrect dataset type specified, try train or test.')
@@ -1262,30 +1204,6 @@ def get_sentence_ordering_dataloader(dataset_type, logger, config, tokenizer):
         return dloader
 
 
-def get_procat_dataloader(dataset_type, logger, config, tokenizer):
-    """
-    Create the dataloaders for the procat datasets,
-    per language model.
-    """
-    available_dataset_types = ['train', 'test', 'validation']
-    if dataset_type not in available_dataset_types:
-        error_msg = 'Incorrect dataset type specified, ' \
-                    'try {}'.format(available_dataset_types)
-        logging.exception(error_msg)
-        raise Exception(error_msg)
-
-    # handle each dataset separately (move if to function at some point)
-    if config['dataset_name'] == 'PROCAT':
-        # load the csv
-        logger.info('Handling {} csv files'.format(config['dataset_name']))
-
-        # load datasets
-        dset = ProcatData(dataset_type, logger, config, tokenizer)
-        dloader = dset.get_dataloader()
-
-        return dloader
-
-
 def restore_grammar_sequence(x, y):
     """
     Take an x & y pair, where x is shuffled elements and y is the proper order
@@ -1363,9 +1281,6 @@ def get_rarest_offer(offers, offer_distro, config):
     offers_sorted_with_rarity = sorted(offer_distro.items(),
                                        key=lambda item: item[1])
     offer_types_from_rarest = [o[0] for o in offers_sorted_with_rarity]
-
-    # TODO: this will currently result in blue being always picked first
-    # due to it being specified first in the config (other than the special ones)
     rarest_found_offer_type = None
     rarest_offer_found = False
     while not rarest_offer_found:
@@ -1712,7 +1627,6 @@ def apply_max_pages_rule(a_catalog, a_rule, valid_sections):
 
         for i in range(num_pages_to_remove):
             # find a section that is basic (only full red, blue or yellow)
-            # TODO: currently hardcoding that any pages without purple or green
             # should have some concept of basic pages for all catalogs in the cfg
             for i, section in enumerate(a_catalog):
 
@@ -1841,7 +1755,6 @@ def make_catalog_longer(a_catalog, a_ruleset, num_to_add):
         section = a_catalog[section_index]
 
         # check if it's a basic one (no p or g, not mixed)
-        # TODO: Make the handling of the distinction between basic
         # and special offers explicit.
         if 'p' in section or 'g' in section or len(set(section)) > 1:
             continue
@@ -1881,7 +1794,6 @@ def make_catalog_longer(a_catalog, a_ruleset, num_to_add):
             # locate section
             section = a_catalog[section_index]
 
-            # TODO: handle special sections better
             # skip special sections
             if 'p' in section or 'g' in section or len(set(section)) > 1:
                 continue
@@ -2022,7 +1934,6 @@ def make_catalog_shorter(a_catalog, a_ruleset, num_to_subtract):
         section = a_catalog[section_index]
 
         # check if it's a basic one (no p or g, not mixed)
-        # TODO: Make the handling of the distinction between basic
         # and special offers explicit.
         if 'p' in section or 'g' in section or len(set(section)) > 1:
             continue
@@ -2077,12 +1988,6 @@ def make_catalog_shorter(a_catalog, a_ruleset, num_to_subtract):
                 del a_catalog[s_i]
                 is_right_num_tokens = True
                 break
-
-    # TODO: in the future, these should throw try errors,
-    #  there's a chance we could neither remove the offers properly
-    #  nor find a page with exactly the right number of offers
-    #  so that the whole thing works by tring to to compose catalogs
-    #  n times, and exits if it can't.
 
     # for now, break the valid_section rule if we still
     # can't make it fit and just take away num_to_subtract offer from the sections
@@ -2166,7 +2071,8 @@ def enforce_token_number(a_catalog, a_ruleset, n_tokens, log):
     target_n_tokens = n_tokens
     current_n_tokens = count_tokens(a_catalog)
 
-    # a_catalog = [['r', 'r', 'r', 'r'], ['y', 'y', 'r', 'r'], ['y', 'r', 'y', 'r'], ['y', 'y', 'r', 'r'], ['y', 'r'], ['y', 'r', 'r', 'y'], ['b', 'b', 'b'], ['b', 'b'], ['b', 'b']]
+    # a_catalog = [['r', 'r', 'r', 'r'], ['y', 'y', 'r', 'r'], ['y', 'r', 'y', 'r'],
+    # ['y', 'y', 'r', 'r'], ['y', 'r'], ['y', 'r', 'r', 'y'], ['b', 'b', 'b'], ['b', 'b'], ['b', 'b']]
 
     log.debug(
         'N tokens before enforce_token_number(): {}'.format(current_n_tokens))
@@ -2885,9 +2791,6 @@ def get_valid_sections_perc_metric(catalogs_as_indxs, rules, cfg):
                                            / len(valid_sections_percentages), 2)
 
     # calculate % valid sections per ruleset
-    # TODO: handle this corner case better
-    #  it is possible to have zero sections of a given ruleset type
-    #  leading to division by zero
     unseen_rulesets = []
     for r, n in ruleset_sections.items():
         if n == 0:
