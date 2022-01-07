@@ -1,4 +1,4 @@
-# Set Interdependence Transformer.
+# Set Interdependence Transformer
 This repository contains all code and links to datasets required for repeated experiments. The Set Interdependence Transformer (SIT) is a modularized set encoder, lending itself particularly well to permutation learning and structure prediction challenges. It uses attention mechanisms to learn a permutation invariant representation of the input set as well as a permutation equivariant representation of its elements. These representations are learned concurrently, such that higher-order dependencies between them can be learned in a single layer of SIT.
 
 ## Setup
