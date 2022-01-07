@@ -40,7 +40,7 @@ if __name__ == "__main__":
     # cfg experiment
     cfg['experiment_name'] = 'tsp'
     cfg['model_configs_path'] = os.path.join('model_configs', 'tsp.json')
-    cfg['generate_new_data'] = False  # keep this False for most experiments
+    cfg['generate_new_data'] = True
 
     # cfg seed
     cfg['seed'] = random.randint(0, 10000)

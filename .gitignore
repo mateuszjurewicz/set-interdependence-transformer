@@ -1,6 +1,6 @@
 # datasets
 data/PROCAT/PROCAT.*.csv
-
+data/rocstory/ROCSTORY.*.csv
 # custom
 .DS_Store
 .idea/
